@@ -33,7 +33,7 @@ import { Link } from '@inertiajs/vue3';
             </Link>
 
             <Link
-                href="/"
+                href="/members"
                 class="block rounded px-3 py-2 hover:bg-slate-700"
             >
                 Data Anggota

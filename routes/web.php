@@ -1,10 +1,11 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\BookController;
+use App\Http\Controllers\MemberController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
-use App\Http\Controllers\BookController;
 
 Route::get('/', function () {
     return Inertia::render('Welcome', [
@@ -26,9 +27,8 @@ Route::middleware('auth')->group(function () {
 });
 
 Route::middleware(['auth'])->group(function () {
- Route::resource('books', BookController::class);
- // baris di atas otomatis mewakili 7 alamat CRUD (index, create, store, show, edit, 
-
+    Route::resource('books', BookController::class);
+    Route::resource('members', MemberController::class);
 });
 
 require __DIR__.'/auth.php';

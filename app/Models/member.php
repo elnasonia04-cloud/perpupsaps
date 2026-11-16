@@ -11,6 +11,9 @@ class Member extends Model
     protected $fillable = [
         'nama',
         'nis_nim',
+        'no_hp',
+        'alamat',
+        'foto',
     ];
 
     public function loans()
@@ -18,5 +21,3 @@ class Member extends Model
         return $this->hasMany(Loan::class);
     }
 }
-
-
