@@ -14,7 +14,8 @@ class MemberController extends Controller
         $members = Member::when($request->search, function ($query, $search) {
             $query->where(function ($q) use ($search) {
                 $q->where('nama', 'like', "%{$search}%")
-                    ->orWhere('nis_nim', 'like', "%{$search}%");
+                    ->orWhere('nis_nim', 'like', "%{$search}%")
+                    ->orWhere('no_hp', 'like', "%{$search}%");
             });
         })->latest()->paginate(10)->withQueryString();
 
@@ -36,8 +37,8 @@ class MemberController extends Controller
         $validated = $request->validate([
             'nama' => 'required|string|max:255',
             'nis_nim' => 'required|string|max:50|unique:members,nis_nim',
-            'no_hp' => 'nullable|string|max:20',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'no_hp' => 'nullable|digits_between:8,15',
+            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
         ]);
 
         if ($request->hasFile('foto')) {
@@ -71,8 +72,8 @@ class MemberController extends Controller
         $validated = $request->validate([
             'nama' => 'required|string|max:255',
             'nis_nim' => 'required|string|max:50|unique:members,nis_nim,' . $member->id,
-            'no_hp' => 'nullable|string|max:20',
-            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:2048',
+            'no_hp' => 'nullable|digits_between:8,15',
+            'foto' => 'nullable|image|mimes:jpg,jpeg,png|max:1024',
         ]);
 
         if ($request->hasFile('foto')) {
