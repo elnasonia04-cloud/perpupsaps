@@ -1,11 +1,34 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
+import { Link, router, usePage } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 defineProps({
     loans: Object,
     flash: Object,
 });
+
+const page = usePage();
+
+// Memproses pengembalian buku
+function kembalikanBuku(loan) {
+    const denda = loan.perkiraan_denda ?? 0;
+
+    const pesan =
+        `Apakah kamu yakin ingin mengembalikan buku "${loan.book?.judul ?? '-'}"?\n\n` +
+        `Perkiraan denda: Rp${Number(denda).toLocaleString('id-ID')}`;
+
+    if (!confirm(pesan)) {
+        return;
+    }
+
+    router.patch(
+        `/loans/${loan.id}/kembalikan`,
+        {},
+        {
+            preserveScroll: true,
+        }
+    );
+}
 </script>
 
 <template>
@@ -16,6 +39,7 @@ defineProps({
                     <h1 class="text-2xl font-bold text-gray-800">
                         Data Peminjaman
                     </h1>
+
                     <p class="mt-1 text-sm text-gray-600">
                         Daftar transaksi peminjaman buku perpustakaan.
                     </p>
@@ -29,11 +53,20 @@ defineProps({
                 </Link>
             </div>
 
+            <!-- Pesan berhasil -->
             <div
                 v-if="flash?.success"
                 class="mb-4 rounded border border-green-300 bg-green-100 p-3 text-sm text-green-700"
             >
                 {{ flash.success }}
+            </div>
+
+            <!-- Pesan kesalahan -->
+            <div
+                v-if="page.props.errors?.loan"
+                class="mb-4 rounded border border-red-300 bg-red-100 p-3 text-sm text-red-700"
+            >
+                {{ page.props.errors.loan }}
             </div>
 
             <div class="overflow-x-auto rounded-lg bg-white shadow">
@@ -42,10 +75,14 @@ defineProps({
                         <tr>
                             <th class="border px-4 py-3">No</th>
                             <th class="border px-4 py-3">Nama Anggota</th>
+                            <th class="border px-4 py-3">Kode Buku</th>
                             <th class="border px-4 py-3">Judul Buku</th>
                             <th class="border px-4 py-3">Tanggal Pinjam</th>
                             <th class="border px-4 py-3">Rencana Kembali</th>
+                            <th class="border px-4 py-3">Tanggal Kembali</th>
+                            <th class="border px-4 py-3">Denda</th>
                             <th class="border px-4 py-3">Status</th>
+                            <th class="border px-4 py-3">Aksi</th>
                         </tr>
                     </thead>
 
@@ -64,6 +101,10 @@ defineProps({
                             </td>
 
                             <td class="border px-4 py-3">
+                                {{ loan.book?.kode_buku ?? '-' }}
+                            </td>
+
+                            <td class="border px-4 py-3">
                                 {{ loan.book?.judul ?? '-' }}
                             </td>
 
@@ -76,25 +117,51 @@ defineProps({
                             </td>
 
                             <td class="border px-4 py-3">
+                                {{ loan.tanggal_kembali ?? '-' }}
+                            </td>
+
+                            <td class="border px-4 py-3">
+                                Rp{{ Number(loan.denda ?? 0).toLocaleString('id-ID') }}
+                            </td>
+
+                            <td class="border px-4 py-3">
                                 <span
-                                    class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700"
                                     v-if="loan.status === 'dipinjam'"
+                                    class="rounded-full bg-yellow-100 px-3 py-1 text-xs font-semibold text-yellow-700"
                                 >
                                     Dipinjam
                                 </span>
 
                                 <span
-                                    class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
                                     v-else
+                                    class="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700"
                                 >
                                     Dikembalikan
+                                </span>
+                            </td>
+
+                            <td class="border px-4 py-3">
+                                <button
+                                    v-if="loan.status === 'dipinjam'"
+                                    type="button"
+                                    @click="kembalikanBuku(loan)"
+                                    class="rounded bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700"
+                                >
+                                    Kembalikan
+                                </button>
+
+                                <span
+                                    v-else
+                                    class="text-xs text-gray-500"
+                                >
+                                    Selesai
                                 </span>
                             </td>
                         </tr>
 
                         <tr v-if="loans.data.length === 0">
                             <td
-                                colspan="6"
+                                colspan="10"
                                 class="border px-4 py-8 text-center text-gray-500"
                             >
                                 Belum ada data peminjaman.
@@ -104,6 +171,7 @@ defineProps({
                 </table>
             </div>
 
+            <!-- Pagination -->
             <div class="mt-4 flex flex-wrap gap-2">
                 <Link
                     v-for="(link, index) in loans.links"

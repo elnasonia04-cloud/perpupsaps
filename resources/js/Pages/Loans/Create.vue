@@ -1,6 +1,5 @@
 <script setup>
-import { Link } from '@inertiajs/vue3';
-import { useForm } from '@inertiajs/vue3';
+import { Link, useForm } from '@inertiajs/vue3';
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 
 const props = defineProps({
@@ -27,7 +26,7 @@ function submit() {
                 </h1>
 
                 <p class="mt-1 text-sm text-gray-600">
-                    Silakan pilih anggota dan buku yang akan dipinjam.
+                    Masa peminjaman adalah 14 hari sejak tanggal peminjaman.
                 </p>
             </div>
 
@@ -49,7 +48,7 @@ function submit() {
                             </option>
 
                             <option
-                                v-for="member in members"
+                                v-for="member in props.members"
                                 :key="member.id"
                                 :value="member.id"
                             >
@@ -80,7 +79,7 @@ function submit() {
                             </option>
 
                             <option
-                                v-for="book in books"
+                                v-for="book in props.books"
                                 :key="book.id"
                                 :value="book.id"
                             >
