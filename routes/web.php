@@ -21,12 +21,35 @@ Route::get('/dashboard', function () {
 })->middleware(['auth', 'verified'])->name('dashboard');
 
 Route::middleware('auth')->group(function () {
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    Route::get('/profile', [ProfileController::class, 'edit'])
+        ->name('profile.edit');
+
+    Route::patch('/profile', [ProfileController::class, 'update'])
+        ->name('profile.update');
+
+    Route::delete('/profile', [ProfileController::class, 'destroy'])
+        ->name('profile.destroy');
 });
 
 Route::middleware(['auth'])->group(function () {
+
+    // Route AJAX Live Search Buku
+    Route::get('/books/search', [BookController::class, 'search'])
+        ->name('books.search');
+
+    // Route AJAX Validasi Realtime Kode Buku
+    Route::get('/books/cek-kode', [BookController::class, 'cekKode'])
+        ->name('books.cek-kode');
+
+    // Route AJAX Live Search Anggota
+    Route::get('/members/search', [MemberController::class, 'search'])
+        ->name('members.search');
+
+    // Route AJAX Validasi Realtime NIS/NIM
+    Route::get('/members/cek-nis', [MemberController::class, 'cekNis'])
+        ->name('members.cek-nis');
+
+    // Route resource Buku dan Anggota
     Route::resource('books', BookController::class);
     Route::resource('members', MemberController::class);
 });

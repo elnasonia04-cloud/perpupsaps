@@ -25,6 +25,53 @@ class MemberController extends Controller
         ]);
     }
 
+    /**
+     * Endpoint JSON untuk AJAX Live Search anggota.
+     */
+    public function search(Request $request)
+    {
+        $kataKunci = $request->query('q', '');
+
+        $members = Member::where(function ($query) use ($kataKunci) {
+            $query->where('nama', 'like', "%{$kataKunci}%")
+                ->orWhere('nis_nim', 'like', "%{$kataKunci}%");
+        })
+            ->latest()
+            ->limit(10)
+            ->get([
+                'id',
+                'nama',
+                'nis_nim',
+                'no_hp',
+                'foto',
+            ]);
+
+        return response()->json($members);
+    }
+
+    /**
+     * Endpoint JSON untuk validasi realtime NIS/NIM.
+     */
+    public function cekNis(Request $request)
+    {
+        // NIS/NIM yang sedang diketik
+        $nisNim = $request->query('nis_nim', '');
+
+        // ID anggota yang diabaikan saat edit
+        $abaikanId = $request->query('abaikan');
+
+        // Memeriksa apakah NIS/NIM sudah digunakan
+        $sudahDipakai = Member::where('nis_nim', $nisNim)
+            ->when($abaikanId, function ($query, $id) {
+                $query->where('id', '!=', $id);
+            })
+            ->exists();
+
+        return response()->json([
+            'tersedia' => ! $sudahDipakai,
+        ]);
+    }
+
     // Menampilkan halaman tambah anggota
     public function create()
     {

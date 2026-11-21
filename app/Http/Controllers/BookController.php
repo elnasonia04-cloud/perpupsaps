@@ -19,7 +19,8 @@ class BookController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('kode_buku', 'like', "%{$search}%")
                         ->orWhere('judul', 'like', "%{$search}%")
-                        ->orWhere('pengarang', 'like', "%{$search}%");
+                        ->orWhere('pengarang', 'like', "%{$search}%")
+                        ->orWhere('penerbit', 'like', "%{$search}%");
                 });
             })
             ->latest()
@@ -29,6 +30,56 @@ class BookController extends Controller
         return inertia('Books/Index', [
             'books' => $books,
             'search' => $search,
+        ]);
+    }
+
+    /**
+     * Endpoint JSON untuk AJAX Live Search buku.
+     */
+    public function search(Request $request)
+    {
+        $kataKunci = $request->query('q', '');
+
+        $books = Book::where(function ($query) use ($kataKunci) {
+            $query->where('kode_buku', 'like', "%{$kataKunci}%")
+                ->orWhere('judul', 'like', "%{$kataKunci}%")
+                ->orWhere('pengarang', 'like', "%{$kataKunci}%")
+                ->orWhere('penerbit', 'like', "%{$kataKunci}%");
+        })
+            ->latest()
+            ->limit(10)
+            ->get([
+                'id',
+                'kode_buku',
+                'judul',
+                'pengarang',
+                'penerbit',
+                'stok',
+            ]);
+
+        return response()->json($books);
+    }
+
+    /**
+     * Endpoint AJAX untuk validasi realtime kode buku.
+     * Parameter abaikan digunakan saat mengedit buku.
+     */
+    public function cekKode(Request $request)
+    {
+        $kodeBuku = $request->query('kode_buku', '');
+        $abaikanId = $request->query('abaikan');
+
+        $query = Book::where('kode_buku', $kodeBuku);
+
+        // Abaikan kode milik buku yang sedang diedit
+        if ($abaikanId) {
+            $query->where('id', '!=', $abaikanId);
+        }
+
+        $sudahDigunakan = $query->exists();
+
+        return response()->json([
+            'tersedia' => !$sudahDigunakan,
         ]);
     }
 

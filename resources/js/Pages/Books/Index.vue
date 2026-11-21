@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { ref, computed } from 'vue';
+import { ref, computed, onBeforeUnmount } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     books: Object,
@@ -12,36 +13,84 @@ const props = defineProps({
 });
 
 const page = usePage();
-const keyword = ref(props.search ?? '');
 
-// Menampilkan pesan berhasil dan pesan error
+const keyword = ref(props.search ?? '');
+const hasilBuku = ref(props.books.data ?? []);
+const sedangMencari = ref(false);
+const sudahMencari = ref(false);
+
 const successMessage = computed(() => page.props.flash?.success);
 const errorMessage = computed(() => page.props.flash?.error);
 
-// Fungsi pencarian buku
-function cari() {
-    router.get(
-        '/books',
-        { search: keyword.value },
-        {
-            preserveState: true,
-            replace: true,
+let debounceTimer = null;
+let controller = null;
+
+// Fungsi AJAX Live Search Buku
+async function cari() {
+    clearTimeout(debounceTimer);
+
+    debounceTimer = setTimeout(async () => {
+        // Batalkan request sebelumnya jika masih berjalan
+        if (controller) {
+            controller.abort();
         }
-    );
+
+        controller = new AbortController();
+
+        sedangMencari.value = true;
+        sudahMencari.value = true;
+
+        try {
+            const response = await axios.get('/books/search', {
+                params: {
+                    q: keyword.value,
+                },
+                signal: controller.signal,
+            });
+
+            hasilBuku.value = response.data;
+        } catch (error) {
+            if (
+                error.name !== 'CanceledError' &&
+                error.name !== 'AbortError'
+            ) {
+                console.error('Gagal mencari buku:', error);
+            }
+        } finally {
+            sedangMencari.value = false;
+        }
+    }, 800); // Debounce 800 milidetik
 }
 
 // Fungsi menghapus buku
 function hapus(id) {
     if (confirm('Yakin ingin menghapus buku ini?')) {
-        router.delete(`/books/${id}`);
+        router.delete(`/books/${id}`, {
+            onSuccess: () => {
+                hasilBuku.value = hasilBuku.value.filter(
+                    (book) => book.id !== id
+                );
+            },
+        });
     }
 }
+
+// Membersihkan timer dan request saat halaman ditutup
+onBeforeUnmount(() => {
+    clearTimeout(debounceTimer);
+
+    if (controller) {
+        controller.abort();
+    }
+});
 </script>
 
 <template>
     <AuthenticatedLayout>
         <div class="p-6">
-            <h1 class="mb-4 text-2xl font-bold">Data Buku</h1>
+            <h1 class="mb-4 text-2xl font-bold">
+                Data Buku
+            </h1>
 
             <!-- Pesan berhasil -->
             <div
@@ -69,23 +118,22 @@ function hapus(id) {
                 </Link>
             </div>
 
-            <!-- Kotak pencarian -->
+            <!-- Kotak Live Search -->
             <div class="mb-4">
                 <input
                     v-model="keyword"
                     type="text"
-                    placeholder="Cari kode, judul, atau pengarang buku..."
+                    placeholder="Cari kode, judul, pengarang, atau penerbit buku..."
                     class="w-full rounded border p-2"
-                    @keyup.enter="cari"
+                    @input="cari"
                 />
 
-                <button
-                    type="button"
-                    class="mt-2 rounded bg-gray-700 px-4 py-2 text-white"
-                    @click="cari"
+                <p
+                    v-if="sedangMencari"
+                    class="mt-2 text-sm text-gray-500"
                 >
-                    Cari
-                </button>
+                    Sedang mencari buku...
+                </p>
             </div>
 
             <!-- Tabel data buku -->
@@ -105,7 +153,7 @@ function hapus(id) {
 
                     <tbody>
                         <tr
-                            v-for="book in props.books.data"
+                            v-for="book in hasilBuku"
                             :key="book.id"
                         >
                             <td class="border p-2">
@@ -152,7 +200,8 @@ function hapus(id) {
                             </td>
                         </tr>
 
-                        <tr v-if="props.books.data.length === 0">
+                        <!-- Pesan jika data tidak ditemukan -->
+                        <tr v-if="hasilBuku.length === 0">
                             <td
                                 colspan="7"
                                 class="border p-4 text-center"
@@ -164,9 +213,9 @@ function hapus(id) {
                 </table>
             </div>
 
-            <!-- Navigasi halaman -->
+            <!-- Pagination sebelum Live Search -->
             <div
-                v-if="props.books.links"
+                v-if="!sudahMencari && props.books.links"
                 class="mt-4 flex flex-wrap gap-2"
             >
                 <template

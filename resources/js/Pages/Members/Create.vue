@@ -1,7 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { useForm } from '@inertiajs/vue3';
-import { ref, onBeforeUnmount } from 'vue';
+import { ref, watch, onBeforeUnmount } from 'vue';
+import axios from 'axios';
 
 const form = useForm({
     nama: '',
@@ -11,6 +12,65 @@ const form = useForm({
 });
 
 const pratinjau = ref(null);
+
+// Status validasi NIS/NIM
+const statusNis = ref('');
+const pesanNis = ref('');
+
+let timerNis = null;
+let controllerNis = null;
+
+// Validasi realtime NIS/NIM
+watch(
+    () => form.nis_nim,
+    (nilai) => {
+        clearTimeout(timerNis);
+
+        if (controllerNis) {
+            controllerNis.abort();
+        }
+
+        form.clearErrors('nis_nim');
+
+        if (!nilai.trim()) {
+            statusNis.value = '';
+            pesanNis.value = '';
+            return;
+        }
+
+        statusNis.value = 'checking';
+        pesanNis.value = 'Memeriksa NIS/NIM...';
+
+        timerNis = setTimeout(async () => {
+            controllerNis = new AbortController();
+
+            try {
+                const response = await axios.get(
+                    route('members.cek-nis'),
+                    {
+                        params: {
+                            nis_nim: nilai.trim(),
+                        },
+                        signal: controllerNis.signal,
+                    }
+                );
+
+                if (response.data.tersedia) {
+                    statusNis.value = 'available';
+                    pesanNis.value = 'NIS/NIM tersedia.';
+                } else {
+                    statusNis.value = 'used';
+                    pesanNis.value = 'NIS/NIM sudah terdaftar.';
+                }
+            } catch (error) {
+                if (error.name !== 'CanceledError') {
+                    statusNis.value = 'error';
+                    pesanNis.value = 'Gagal memeriksa NIS/NIM.';
+                }
+            }
+        }, 300);
+    }
+);
 
 // Memilih foto anggota
 function pilihFoto(event) {
@@ -27,8 +87,14 @@ function pilihFoto(event) {
         : null;
 }
 
-// Menghapus pratinjau ketika halaman ditutup
+// Menghapus pratinjau dan timer ketika halaman ditutup
 onBeforeUnmount(() => {
+    clearTimeout(timerNis);
+
+    if (controllerNis) {
+        controllerNis.abort();
+    }
+
     if (pratinjau.value) {
         URL.revokeObjectURL(pratinjau.value);
     }
@@ -36,11 +102,20 @@ onBeforeUnmount(() => {
 
 // Menyimpan data anggota
 function submit() {
+    if (
+        !form.nis_nim.trim() ||
+        statusNis.value !== 'available'
+    ) {
+        return;
+    }
+
     form.post(route('members.store'), {
         forceFormData: true,
         onSuccess: () => {
             form.reset();
             pratinjau.value = null;
+            statusNis.value = '';
+            pesanNis.value = '';
         },
     });
 }
@@ -84,6 +159,19 @@ function submit() {
                         type="text"
                         class="border rounded p-2 w-full"
                     >
+
+                    <!-- Pesan validasi realtime -->
+                    <div
+                        v-if="pesanNis"
+                        :class="{
+                            'text-green-600': statusNis === 'available',
+                            'text-red-600': statusNis === 'used'
+                                || statusNis === 'error',
+                            'text-gray-500': statusNis === 'checking'
+                        }"
+                    >
+                        {{ pesanNis }}
+                    </div>
 
                     <div
                         v-if="form.errors.nis_nim"
@@ -142,7 +230,11 @@ function submit() {
                 <!-- Tombol Simpan -->
                 <button
                     type="submit"
-                    :disabled="form.processing"
+                    :disabled="
+                        form.processing ||
+                        statusNis !== 'available' ||
+                        !form.nis_nim.trim()
+                    "
                     class="bg-blue-600 text-white px-4 py-2 rounded disabled:opacity-50"
                 >
                     {{ form.processing ? 'Menyimpan...' : 'Simpan' }}

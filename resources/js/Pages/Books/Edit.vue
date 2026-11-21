@@ -1,6 +1,8 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Link, useForm } from '@inertiajs/vue3';
+import { ref, watch, onBeforeUnmount } from 'vue';
+import axios from 'axios';
 
 const props = defineProps({
     book: Object,
@@ -15,7 +17,68 @@ const form = useForm({
     stok: props.book.stok ?? 0,
 });
 
+const kodeTersedia = ref(true);
+const sedangMemeriksa = ref(false);
+
+let timer = null;
+let controller = null;
+
+watch(
+    () => form.kode_buku,
+    (kode) => {
+        clearTimeout(timer);
+
+        if (controller) {
+            controller.abort();
+        }
+
+        if (!kode || !kode.trim()) {
+            kodeTersedia.value = false;
+            sedangMemeriksa.value = false;
+            return;
+        }
+
+        sedangMemeriksa.value = true;
+        kodeTersedia.value = false;
+
+        timer = setTimeout(async () => {
+            controller = new AbortController();
+
+            try {
+                const response = await axios.get('/books/cek-kode', {
+                    params: {
+                        kode_buku: kode,
+                        abaikan: props.book.id,
+                    },
+                    signal: controller.signal,
+                });
+
+                kodeTersedia.value = response.data.tersedia;
+            } catch (error) {
+                if (error.name !== 'CanceledError') {
+                    kodeTersedia.value = false;
+                }
+            } finally {
+                sedangMemeriksa.value = false;
+            }
+        }, 300);
+    },
+    { immediate: true }
+);
+
+onBeforeUnmount(() => {
+    clearTimeout(timer);
+
+    if (controller) {
+        controller.abort();
+    }
+});
+
 function submit() {
+    if (!kodeTersedia.value || sedangMemeriksa.value) {
+        return;
+    }
+
     form.put(`/books/${props.book.id}`);
 }
 </script>
@@ -31,12 +94,38 @@ function submit() {
             >
                 <div>
                     <label class="mb-1 block font-medium">Kode Buku</label>
+
                     <input
                         v-model="form.kode_buku"
                         type="text"
                         class="w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.kode_buku" class="mt-1 text-sm text-red-600">
+
+                    <p
+                        v-if="sedangMemeriksa"
+                        class="mt-1 text-sm text-gray-500"
+                    >
+                        Memeriksa kode buku...
+                    </p>
+
+                    <p
+                        v-else-if="form.kode_buku && kodeTersedia"
+                        class="mt-1 text-sm text-green-600"
+                    >
+                        Kode buku tersedia.
+                    </p>
+
+                    <p
+                        v-else-if="form.kode_buku"
+                        class="mt-1 text-sm text-red-600"
+                    >
+                        Kode buku sudah digunakan.
+                    </p>
+
+                    <p
+                        v-if="form.errors.kode_buku"
+                        class="mt-1 text-sm text-red-600"
+                    >
                         {{ form.errors.kode_buku }}
                     </p>
                 </div>
@@ -107,7 +196,7 @@ function submit() {
                 <div class="flex gap-3 pt-2">
                     <button
                         type="submit"
-                        :disabled="form.processing"
+                        :disabled="form.processing || sedangMemeriksa || !kodeTersedia"
                         class="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
                     >
                         {{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan' }}
