@@ -19,10 +19,12 @@ const form = useForm({
 
 const kodeTersedia = ref(true);
 const sedangMemeriksa = ref(false);
+const pesanKode = ref('');
 
 let timer = null;
 let controller = null;
 
+// Validasi realtime kode buku
 watch(
     () => form.kode_buku,
     (kode) => {
@@ -35,11 +37,13 @@ watch(
         if (!kode || !kode.trim()) {
             kodeTersedia.value = false;
             sedangMemeriksa.value = false;
+            pesanKode.value = '';
             return;
         }
 
         sedangMemeriksa.value = true;
         kodeTersedia.value = false;
+        pesanKode.value = '';
 
         timer = setTimeout(async () => {
             controller = new AbortController();
@@ -47,16 +51,25 @@ watch(
             try {
                 const response = await axios.get('/books/cek-kode', {
                     params: {
-                        kode_buku: kode,
+                        kode_buku: kode.trim(),
                         abaikan: props.book.id,
                     },
                     signal: controller.signal,
                 });
 
                 kodeTersedia.value = response.data.tersedia;
+
+                pesanKode.value = response.data.tersedia
+                    ? 'Kode buku tersedia.'
+                    : 'Kode buku sudah digunakan.';
             } catch (error) {
-                if (error.name !== 'CanceledError') {
+                if (
+                    error.name !== 'CanceledError' &&
+                    error.name !== 'AbortError'
+                ) {
                     kodeTersedia.value = false;
+                    pesanKode.value = 'Gagal memeriksa kode buku.';
+                    console.error(error);
                 }
             } finally {
                 sedangMemeriksa.value = false;
@@ -66,6 +79,7 @@ watch(
     { immediate: true }
 );
 
+// Membersihkan timer dan request
 onBeforeUnmount(() => {
     clearTimeout(timer);
 
@@ -74,6 +88,7 @@ onBeforeUnmount(() => {
     }
 });
 
+// Fungsi menyimpan perubahan
 function submit() {
     if (!kodeTersedia.value || sedangMemeriksa.value) {
         return;
@@ -85,20 +100,27 @@ function submit() {
 
 <template>
     <AuthenticatedLayout>
-        <div class="p-6">
-            <h1 class="mb-6 text-2xl font-bold">Edit Buku</h1>
+        <div class="p-4">
+
+            <h1 class="mb-4 text-xl font-bold">
+                Edit Buku
+            </h1>
 
             <form
                 @submit.prevent="submit"
-                class="max-w-xl space-y-4"
+                class="space-y-3"
             >
+
+                <!-- Kode Buku -->
                 <div>
-                    <label class="mb-1 block font-medium">Kode Buku</label>
+                    <label class="mb-1 block font-medium">
+                        Kode Buku
+                    </label>
 
                     <input
                         v-model="form.kode_buku"
                         type="text"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
 
                     <p
@@ -109,97 +131,125 @@ function submit() {
                     </p>
 
                     <p
-                        v-else-if="form.kode_buku && kodeTersedia"
-                        class="mt-1 text-sm text-green-600"
+                        v-else-if="pesanKode"
+                        class="mt-1 text-sm"
+                        :class="kodeTersedia
+                            ? 'text-green-600'
+                            : 'text-red-600'"
                     >
-                        Kode buku tersedia.
+                        {{ pesanKode }}
                     </p>
 
-                    <p
-                        v-else-if="form.kode_buku"
-                        class="mt-1 text-sm text-red-600"
-                    >
-                        Kode buku sudah digunakan.
-                    </p>
-
-                    <p
-                        v-if="form.errors.kode_buku"
-                        class="mt-1 text-sm text-red-600"
-                    >
+                    <p class="mt-1 text-sm text-red-600">
                         {{ form.errors.kode_buku }}
                     </p>
                 </div>
 
+                <!-- Judul -->
                 <div>
-                    <label class="mb-1 block font-medium">Judul Buku</label>
+                    <label class="mb-1 block font-medium">
+                        Judul Buku
+                    </label>
+
                     <input
                         v-model="form.judul"
                         type="text"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.judul" class="mt-1 text-sm text-red-600">
+
+                    <p class="text-sm text-red-600">
                         {{ form.errors.judul }}
                     </p>
                 </div>
 
+                <!-- Pengarang -->
                 <div>
-                    <label class="mb-1 block font-medium">Pengarang</label>
+                    <label class="mb-1 block font-medium">
+                        Pengarang
+                    </label>
+
                     <input
                         v-model="form.pengarang"
                         type="text"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.pengarang" class="mt-1 text-sm text-red-600">
+
+                    <p class="text-sm text-red-600">
                         {{ form.errors.pengarang }}
                     </p>
                 </div>
 
+                <!-- Penerbit -->
                 <div>
-                    <label class="mb-1 block font-medium">Penerbit</label>
+                    <label class="mb-1 block font-medium">
+                        Penerbit
+                    </label>
+
                     <input
                         v-model="form.penerbit"
                         type="text"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.penerbit" class="mt-1 text-sm text-red-600">
+
+                    <p class="text-sm text-red-600">
                         {{ form.errors.penerbit }}
                     </p>
                 </div>
 
+                <!-- Tahun -->
                 <div>
-                    <label class="mb-1 block font-medium">Tahun Terbit</label>
+                    <label class="mb-1 block font-medium">
+                        Tahun Terbit
+                    </label>
+
                     <input
                         v-model="form.tahun"
                         type="number"
                         min="1000"
                         max="9999"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.tahun" class="mt-1 text-sm text-red-600">
+
+                    <p class="text-sm text-red-600">
                         {{ form.errors.tahun }}
                     </p>
                 </div>
 
+                <!-- Stok -->
                 <div>
-                    <label class="mb-1 block font-medium">Stok</label>
+                    <label class="mb-1 block font-medium">
+                        Stok Buku
+                    </label>
+
                     <input
                         v-model="form.stok"
                         type="number"
                         min="0"
-                        class="w-full rounded border p-2"
+                        class="block w-full rounded border p-2"
                     />
-                    <p v-if="form.errors.stok" class="mt-1 text-sm text-red-600">
+
+                    <p class="text-sm text-red-600">
                         {{ form.errors.stok }}
                     </p>
                 </div>
 
-                <div class="flex gap-3 pt-2">
+                <!-- Tombol -->
+                <div class="flex gap-2 pt-2">
+
                     <button
                         type="submit"
-                        :disabled="form.processing || sedangMemeriksa || !kodeTersedia"
-                        class="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50"
+                        :disabled="
+                            form.processing ||
+                            sedangMemeriksa ||
+                            !kodeTersedia
+                        "
+                        class="rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
                     >
-                        {{ form.processing ? 'Menyimpan...' : 'Simpan Perubahan' }}
+                        {{
+                            form.processing
+                                ? 'Menyimpan...'
+                                : 'Simpan Perubahan'
+                        }}
                     </button>
 
                     <Link
@@ -208,7 +258,9 @@ function submit() {
                     >
                         Batal
                     </Link>
+
                 </div>
+
             </form>
         </div>
     </AuthenticatedLayout>

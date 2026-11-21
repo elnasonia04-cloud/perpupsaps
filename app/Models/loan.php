@@ -11,11 +11,12 @@ class Loan extends Model
         'member_id',
         'tanggal_pinjam',
         'tanggal_kembali_rencana',
+        'status',
     ];
 
     protected $casts = [
-        'tanggal_pinjam' => 'datetime',
-        'tanggal_kembali_rencana' => 'datetime',
+        'tanggal_pinjam' => 'date',
+        'tanggal_kembali_rencana' => 'date',
     ];
 
     public function book()

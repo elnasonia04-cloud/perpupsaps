@@ -3,6 +3,7 @@
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\BookController;
 use App\Http\Controllers\MemberController;
+use App\Http\Controllers\LoanController;
 use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
@@ -52,6 +53,10 @@ Route::middleware(['auth'])->group(function () {
     // Route resource Buku dan Anggota
     Route::resource('books', BookController::class);
     Route::resource('members', MemberController::class);
+
+    // Route Transaksi Peminjaman
+    Route::resource('loans', LoanController::class)
+        ->only(['index', 'create', 'store']);
 });
 
 require __DIR__.'/auth.php';

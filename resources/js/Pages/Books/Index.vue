@@ -1,7 +1,7 @@
 <script setup>
 import AuthenticatedLayout from '@/Layouts/AuthenticatedLayout.vue';
 import { Link, router, usePage } from '@inertiajs/vue3';
-import { ref, computed, onBeforeUnmount } from 'vue';
+import { ref, computed, onBeforeUnmount, watch } from 'vue';
 import axios from 'axios';
 
 const props = defineProps({
@@ -25,12 +25,34 @@ const errorMessage = computed(() => page.props.flash?.error);
 let debounceTimer = null;
 let controller = null;
 
+// Menyesuaikan data ketika halaman pagination berubah
+watch(
+    () => props.books,
+    (newBooks) => {
+        if (!sudahMencari.value) {
+            hasilBuku.value = newBooks.data ?? [];
+        }
+    }
+);
+
 // Fungsi AJAX Live Search Buku
 async function cari() {
     clearTimeout(debounceTimer);
 
+    // Jika kotak pencarian dikosongkan,
+    // tampilkan kembali data dan pagination bawaan
+    if (keyword.value.trim() === '') {
+        if (controller) {
+            controller.abort();
+        }
+
+        sedangMencari.value = false;
+        sudahMencari.value = false;
+        hasilBuku.value = props.books.data ?? [];
+        return;
+    }
+
     debounceTimer = setTimeout(async () => {
-        // Batalkan request sebelumnya jika masih berjalan
         if (controller) {
             controller.abort();
         }
@@ -59,7 +81,7 @@ async function cari() {
         } finally {
             sedangMencari.value = false;
         }
-    }, 800); // Debounce 800 milidetik
+    }, 800);
 }
 
 // Fungsi menghapus buku
@@ -87,8 +109,9 @@ onBeforeUnmount(() => {
 
 <template>
     <AuthenticatedLayout>
-        <div class="p-6">
-            <h1 class="mb-4 text-2xl font-bold">
+        <div class="p-4">
+
+            <h1 class="mb-4 text-xl font-bold">
                 Data Buku
             </h1>
 
@@ -108,46 +131,47 @@ onBeforeUnmount(() => {
                 {{ errorMessage }}
             </div>
 
-            <!-- Tombol tambah buku -->
-            <div class="mb-4">
+            <!-- Tombol tambah buku dan pencarian -->
+            <div class="mb-4 flex flex-wrap items-center gap-3">
+
                 <Link
                     href="/books/create"
                     class="rounded bg-blue-600 px-4 py-2 text-white"
                 >
                     + Tambah Buku
                 </Link>
-            </div>
 
-            <!-- Kotak Live Search -->
-            <div class="mb-4">
                 <input
                     v-model="keyword"
                     type="text"
                     placeholder="Cari kode, judul, pengarang, atau penerbit buku..."
-                    class="w-full rounded border p-2"
+                    class="w-full rounded border p-2 md:w-96"
                     @input="cari"
                 />
 
-                <p
+                <span
                     v-if="sedangMencari"
-                    class="mt-2 text-sm text-gray-500"
+                    class="text-sm text-gray-500"
                 >
                     Sedang mencari buku...
-                </p>
+                </span>
+
             </div>
 
             <!-- Tabel data buku -->
             <div class="overflow-x-auto">
-                <table class="w-full border-collapse border">
+
+                <table class="w-full border-collapse">
+
                     <thead class="bg-gray-100">
                         <tr>
-                            <th class="border p-2">Kode</th>
-                            <th class="border p-2">Judul</th>
-                            <th class="border p-2">Pengarang</th>
-                            <th class="border p-2">Penerbit</th>
-                            <th class="border p-2">Tahun</th>
-                            <th class="border p-2">Stok</th>
-                            <th class="border p-2">Aksi</th>
+                            <th class="border px-3 py-2">Kode</th>
+                            <th class="border px-3 py-2">Judul</th>
+                            <th class="border px-3 py-2">Pengarang</th>
+                            <th class="border px-3 py-2">Penerbit</th>
+                            <th class="border px-3 py-2">Tahun</th>
+                            <th class="border px-3 py-2">Stok</th>
+                            <th class="border px-3 py-2">Aksi</th>
                         </tr>
                     </thead>
 
@@ -156,32 +180,33 @@ onBeforeUnmount(() => {
                             v-for="book in hasilBuku"
                             :key="book.id"
                         >
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.kode_buku }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.judul }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.pengarang }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.penerbit || '-' }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.tahun || '-' }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 {{ book.stok }}
                             </td>
 
-                            <td class="border p-2">
+                            <td class="border px-3 py-2">
                                 <div class="flex gap-2">
+
                                     <Link
                                         :href="`/books/${book.id}/edit`"
                                         class="rounded bg-yellow-500 px-3 py-1 text-white"
@@ -196,6 +221,7 @@ onBeforeUnmount(() => {
                                     >
                                         Hapus
                                     </button>
+
                                 </div>
                             </td>
                         </tr>
@@ -204,16 +230,17 @@ onBeforeUnmount(() => {
                         <tr v-if="hasilBuku.length === 0">
                             <td
                                 colspan="7"
-                                class="border p-4 text-center"
+                                class="border px-3 py-2 text-center"
                             >
                                 Data buku tidak ditemukan.
                             </td>
                         </tr>
                     </tbody>
+
                 </table>
             </div>
 
-            <!-- Pagination sebelum Live Search -->
+            <!-- Pagination -->
             <div
                 v-if="!sudahMencari && props.books.links"
                 class="mt-4 flex flex-wrap gap-2"
@@ -239,6 +266,7 @@ onBeforeUnmount(() => {
                     />
                 </template>
             </div>
+
         </div>
     </AuthenticatedLayout>
 </template>

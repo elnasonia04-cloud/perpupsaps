@@ -77,6 +77,7 @@ watch(
     }
 );
 
+// Fungsi menyimpan buku
 function submit() {
     if (!kodeTersedia.value || sedangMemeriksa.value) {
         return;
@@ -85,7 +86,7 @@ function submit() {
     form.post(route('books.store'));
 }
 
-// Membersihkan timer dan request saat halaman ditutup
+// Membersihkan timer dan request
 onBeforeUnmount(() => {
     clearTimeout(debounceTimer);
 
@@ -97,30 +98,35 @@ onBeforeUnmount(() => {
 
 <template>
     <AuthenticatedLayout>
-        <div class="p-6">
+        <div class="p-4">
+
             <h1 class="mb-4 text-xl font-bold">
                 Tambah Buku
             </h1>
 
-            <form @submit.prevent="submit">
-                <div class="mb-4">
-                    <label>Kode Buku</label>
+            <form @submit.prevent="submit" class="space-y-3">
+
+                <!-- Kode Buku -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Kode Buku
+                    </label>
 
                     <input
                         v-model="form.kode_buku"
                         type="text"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan kode buku"
                     />
 
-                    <!-- Pesan validasi realtime -->
-                    <div
+                    <p
                         v-if="sedangMemeriksa"
                         class="mt-1 text-sm text-gray-500"
                     >
                         Memeriksa kode buku...
-                    </div>
+                    </p>
 
-                    <div
+                    <p
                         v-else-if="pesanKode"
                         class="mt-1 text-sm"
                         :class="kodeTersedia
@@ -128,105 +134,132 @@ onBeforeUnmount(() => {
                             : 'text-red-600'"
                     >
                         {{ pesanKode }}
-                    </div>
+                    </p>
 
-                    <div class="text-red-600">
+                    <p class="mt-1 text-sm text-red-600">
                         {{ form.errors.kode_buku }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label>Judul Buku</label>
+                <!-- Judul Buku -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Judul Buku
+                    </label>
 
                     <input
                         v-model="form.judul"
                         type="text"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan judul buku"
                     />
 
-                    <div class="text-red-600">
+                    <p class="text-sm text-red-600">
                         {{ form.errors.judul }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label>Pengarang</label>
+                <!-- Pengarang -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Pengarang
+                    </label>
 
                     <input
                         v-model="form.pengarang"
                         type="text"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan nama pengarang"
                     />
 
-                    <div class="text-red-600">
+                    <p class="text-sm text-red-600">
                         {{ form.errors.pengarang }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label>Penerbit</label>
+                <!-- Penerbit -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Penerbit
+                    </label>
 
                     <input
                         v-model="form.penerbit"
                         type="text"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan nama penerbit"
                     />
 
-                    <div class="text-red-600">
+                    <p class="text-sm text-red-600">
                         {{ form.errors.penerbit }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label>Tahun Terbit</label>
+                <!-- Tahun -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Tahun Terbit
+                    </label>
 
                     <input
                         v-model="form.tahun"
                         type="number"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan tahun terbit"
                     />
 
-                    <div class="text-red-600">
+                    <p class="text-sm text-red-600">
                         {{ form.errors.tahun }}
-                    </div>
+                    </p>
                 </div>
 
-                <div class="mb-4">
-                    <label>Stok Buku</label>
+                <!-- Stok -->
+                <div>
+                    <label class="mb-1 block font-medium">
+                        Stok Buku
+                    </label>
 
                     <input
                         v-model="form.stok"
                         type="number"
+                        min="0"
                         class="block w-full rounded border p-2"
+                        placeholder="Masukkan jumlah stok"
                     />
 
-                    <div class="text-red-600">
+                    <p class="text-sm text-red-600">
                         {{ form.errors.stok }}
-                    </div>
+                    </p>
                 </div>
 
-                <button
-                    type="submit"
-                    :disabled="
-                        form.processing ||
-                        sedangMemeriksa ||
-                        !kodeTersedia
-                    "
-                    class="rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                    {{
-                        form.processing
-                            ? 'Menyimpan...'
-                            : 'Simpan'
-                    }}
-                </button>
+                <!-- Tombol -->
+                <div class="flex gap-2 pt-2">
 
-                <Link
-                    href="/books"
-                    class="ml-2 rounded bg-gray-500 px-4 py-2 text-white"
-                >
-                    Kembali
-                </Link>
+                    <button
+                        type="submit"
+                        :disabled="
+                            form.processing ||
+                            sedangMemeriksa ||
+                            !kodeTersedia
+                        "
+                        class="rounded bg-blue-600 px-4 py-2 text-white disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                        {{
+                            form.processing
+                                ? 'Menyimpan...'
+                                : 'Simpan'
+                        }}
+                    </button>
+
+                    <Link
+                        href="/books"
+                        class="rounded bg-gray-500 px-4 py-2 text-white"
+                    >
+                        Kembali
+                    </Link>
+
+                </div>
+
             </form>
         </div>
     </AuthenticatedLayout>
